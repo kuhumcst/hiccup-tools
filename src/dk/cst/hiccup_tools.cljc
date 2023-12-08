@@ -19,6 +19,12 @@
     [tag attr]
     [tag]))
 
+(defn node-children
+  [[tag & children]]
+  (if (map? (first children))
+    (rest children)
+    children))
+
 (defn insert-front
   [node children]
   (let [head (node-head node)]
@@ -111,6 +117,10 @@
                          ;; No split, just proceed.
                          loc))))))
 (comment
+  (node-head [:p 1 2 3])
+  (node-head [:p {:id "glen"} 1 2 3])
+  (node-children [:p {:id "glen"} 1 2 3])
+
   ;; Structurally split a Hiccup tree at every [:pb] element (4 in total).
   (->> (split-hiccup
 
