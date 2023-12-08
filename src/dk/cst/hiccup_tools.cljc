@@ -1,8 +1,7 @@
 (ns dk.cst.hiccup-tools
   "Functions for navigating and structurally transforming Hiccup."
   (:require [clojure.zip :as zip]
-            [hickory.zip :as hzip])
-  (:refer-clojure :exclude [split-with]))
+            [hickory.zip :as hzip]))
 
 (defn top-loc
   "Find the top-most loc of this `loc` that is not the root."
@@ -80,11 +79,17 @@
                        (second split))]
           (recur parent left' right'))))))
 
-(defn split-with
-  "Structurally split a `hiccup` tree when `pred` is true for (pred node).
+(defn split-hiccup
+  "Structurally split `hiccup` whenever (pred node) is true for `pred`.
+  The split proceeds all the way down to the children of the root node.
 
-  The node present at `loc` can optionally be retained at either side of the
-  split; however, by default it will be left out."
+  The splitting node can be retained by setting the :retain option, e.g.
+
+      :before  - retain the node *in place* on the left side of the split.
+      :after   - retain the node *in place* on the right side of the split.
+      :between - place the node *between* the two new trees.
+
+  By default, the node will not be retained."
   [pred hiccup & {:keys [retain] :as opts}]
   (loop [[node :as loc] (hzip/hiccup-zip hiccup)]
     (if (zip/end? loc)
@@ -94,27 +99,40 @@
                            (if before
                              (-> (:loc (meta split))
                                  (zip/insert-left before)
-                                 (zip/insert-left node)
+                                 (cond->
+                                   (= retain :between)
+                                   (zip/insert-left node))
                                  (zip/replace after))
-                             loc))
+                             ;; If splitting node is the very first element,
+                             ;; we must ensure that it also respects :retain!
+                             (if retain
+                               loc
+                               (zip/remove loc))))
+                         ;; No split, just proceed.
                          loc))))))
 (comment
   ;; Structurally split a Hiccup tree at every [:pb] element (4 in total).
-  (split-with
-    (fn pb? [x]
-      (and (vector? x)
-           (= :pb (first x))))
-    [:root
-     [:pb {:id 1}]
-     [:a {}
-      [:b {}
-       [:c {} 1 [:pb {:id 2}] 2]
-       2 [:pb {:id 3}] 3]]
-     [:d
-      3
-      [:pb {:id 4}]
-      4
-      [:e]]])
+  (->> (split-hiccup
+
+         (fn pb? [x]
+           (and (vector? x)
+                (= :pb (first x))))
+
+         [:root
+          [:pb {:id 1}]
+          [:a {}
+           [:b {}
+            [:c {} 1 [:pb {:id 2}] 2]
+            2 [:pb {:id 3}] 3]]
+          [:d
+           3
+           [:pb {:id 4}]
+           4
+           [:e]]]
+
+         :retain :between)
+
+       (clojure.pprint/pprint))
 
   ;; The resulting Hiccup, ready to be paginated.
   #_[:root
