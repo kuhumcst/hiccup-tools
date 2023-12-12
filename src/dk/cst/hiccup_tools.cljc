@@ -13,6 +13,20 @@
         loc
         (recur parent)))))
 
+(defn cut
+  "Cut every node in `hiccup` when (pred node) is true for `pred`.
+  The cut nodes are returned as metadata under the :matches key."
+  [pred hiccup]
+  (let [matches (atom [])]
+    (loop [[node :as loc] (hzip/hiccup-zip hiccup)]
+      (if (zip/end? loc)
+        (with-meta (zip/root loc) {:matches (not-empty @matches)})
+        (recur (zip/next (if (pred node)
+                           (do
+                             (swap! matches conj node)
+                             (zip/remove loc))
+                           loc)))))))
+
 (defn node-head
   [[tag attr]]
   (if (map? attr)
@@ -156,4 +170,22 @@
      [:pb {:id 4}]
      [:d 4 [:e]]]
 
+  ;; Demo of node cutting
+  (let [result (cut
+                 (fn pb? [x]
+                   (and (vector? x)
+                        (= :pb (first x))))
+                 [:root
+                  [:pb {:id 1}]
+                  [:a {}
+                   [:b {}
+                    [:c {} 1 [:pb {:id 2}] 2]
+                    2 [:pb {:id 3}] 3]]
+                  [:d
+                   3
+                   [:pb {:id 4}]
+                   4
+                   [:e]]])]
+    {:result  result
+     :matches (:matches (meta result))})
   #_.)
