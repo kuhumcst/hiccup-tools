@@ -1,5 +1,6 @@
 (ns dk.cst.hiccup-tools.match
-  "Predicates for matching against Hiccup vectors.")
+  "Predicates for matching against Hiccup vectors."
+  (:require [dk.cst.hiccup-tools.elem :as elem]))
 
 (defn tag
   "Get a predicate for matching elements with the tag `k`."
@@ -27,6 +28,27 @@
                (recur m'))
              (when (not v)
                (recur m'))))))))
+
+(defn child
+  "Get a predicate matching elements where `pred` is true for at least one of
+  the children. If `index` is supplied, the child must match the exact position.
+
+  This can compose with other predicates, e.g. those from this namespace:
+
+    (child (attr {:class \"label\"}))
+
+  The above matches an element containing a child with the :class `label`."
+  ([pred]
+   #(loop [[node & nodes] (when (vector? %)
+                            (elem/children %))]
+      (cond
+        (pred node) node
+        nodes (recur nodes))))
+  ([pred index]
+   #(when (vector? %)
+      (let [child (nth (elem/children %) index)]
+        (when (pred child)
+          child)))))
 
 (defn tag+attr
   "Get a predicate for matching both tag `k` and attr `m`."

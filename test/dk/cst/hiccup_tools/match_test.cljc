@@ -68,6 +68,51 @@
       (is (not (pred [:span {:class "thing"}
                       "content"]))))))
 
+(deftest child-test
+  (let [pred       (match/child (match/tag+attr :span {:id    true
+                                                       :class "thing"}))
+        index-pred (match/child (match/tag+attr :span {:id    true
+                                                       :class "thing"})
+                                1)]
+    (testing "should only match direct children"
+      (is (pred [:div
+                 [:span {:id    "present"
+                         :class "thing"}
+                  "content"]]))
+      (is (not (pred [:span {:id    "present"
+                             :class "thing"}
+                      "content"])))
+      (is (not (pred [:span {:id    true
+                             :class "thing"}
+                      [:div
+                       [:span {:id    "present"
+                               :class "thing"}
+                        "content"]]]))))
+    (testing "number or order of children should not matter"
+      (is (pred [:div
+                 [:div "other content"]
+                 [:span {:id    "present"
+                         :class "thing"}
+                  "content"]
+                 [:span "other content"]])))
+    (testing "a 'matching' parent should not make a difference"
+      (is (pred [:span {:id    true
+                        :class "thing"}
+                 [:span {:id    "present"
+                         :class "thing"}
+                  "content"]])))
+    (testing "the index should limit to a specific position"
+      (is (index-pred [:div
+                       [:div]
+                       [:span {:id    "present"
+                               :class "thing"}
+                              "content"]]))
+      (is (not (index-pred [:div
+                            [:span {:id    "present"
+                                    :class "thing"}
+                             "content"]
+                            [:div]]))))))
+
 (deftest hiccup-test
   (let [pred (match/hiccup [:span {:id    true
                                    :class "thing"}])]
