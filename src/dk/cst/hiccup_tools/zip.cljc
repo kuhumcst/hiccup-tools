@@ -1,6 +1,7 @@
 (ns dk.cst.hiccup-tools.zip
   "Functions for navigating and structurally transforming zippers."
-  (:require [clojure.zip :as zip]
+  (:require [clojure.string :as str]
+            [clojure.zip :as zip]
             [dk.cst.hiccup-tools.elem :as elem]))
 
 (defn top-level
@@ -74,3 +75,20 @@
                        (elem/insert-front (second split) [right])
                        (second split))]
           (recur parent left' right'))))))
+
+(defn surround-lb
+  "Insert linebreaks at either end of `loc`."
+  [loc]
+  (-> loc
+      (zip/insert-child "\n")
+      (zip/append-child "\n")))
+
+(defn append-lb
+  "Insert a single linebreak at the end of `loc`."
+  [loc]
+  (zip/append-child loc "\n"))
+
+(defn insert-space
+  "Insert a space at the end of `loc`."
+  [loc]
+  (zip/append-child loc " "))

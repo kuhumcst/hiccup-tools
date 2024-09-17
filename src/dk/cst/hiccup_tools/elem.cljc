@@ -1,6 +1,11 @@
 (ns dk.cst.hiccup-tools.elem
   "Basic operations on Hiccup vectors; no dependency on clojure.zip.")
 
+(defn attr
+  [[tag attr]]
+  (when (map? attr)
+    attr))
+
 (defn head
   [[tag attr]]
   (if (map? attr)

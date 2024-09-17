@@ -8,6 +8,13 @@
   #(and (vector? %)
         (= (first %) k)))
 
+(defn tags
+  "Get a predicate for matching elements with the tags in `kset`."
+  [& ks]
+  (let [kset (set ks)]
+    #(and (vector? %)
+          (get kset (first %)))))
+
 (defn attr
   "Get a predicate for matching elements with attribute maps matching `m`.
 
@@ -39,11 +46,11 @@
 
   The above matches an element containing a child with the :class `label`."
   ([pred]
-   #(loop [[node & nodes] (when (vector? %)
-                            (elem/children %))]
-      (cond
-        (pred node) node
-        nodes (recur nodes))))
+   #(when (vector? %)
+      (loop [[node & nodes] (elem/children %)]
+        (cond
+          (pred node) node
+          nodes (recur nodes)))))
   ([pred index]
    #(when (vector? %)
       (let [child (nth (elem/children %) index)]
