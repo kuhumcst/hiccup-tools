@@ -18,7 +18,7 @@
                                4
                                [:e]]])]
     (testing "skipping ahead should move loc forward to specified node"
-      (is (= (zip/node (z/skip-ahead loc [:pb {:id 4 :class "thing"}]))
+      (is (= (zip/node (z/skip-ahead loc (match/matcher [:pb {:id 4 :class "thing"}])))
              [:pb {:id 4 :class "thing"}])))
     (testing "skipping ahead should move loc forward to node matching pred"
       (is (= (zip/node (z/skip-ahead loc (match/attr {:class "thing"})))
@@ -37,7 +37,7 @@
                                4
                                [:e]]])]
     (testing "the node should be the node of the final top loc"
-      (is (= (-> (z/skip-ahead loc [:pb {:id 4 :class "thing"}])
+      (is (= (-> (z/skip-ahead loc (match/matcher [:pb {:id 4 :class "thing"}]))
                  (z/top-level)
                  (zip/node))
              [:d

@@ -1,7 +1,6 @@
 (ns dk.cst.hiccup-tools.zip
   "Functions for navigating and structurally transforming zippers."
-  (:require [clojure.string :as str]
-            [clojure.zip :as zip]
+  (:require [clojure.zip :as zip]
             [dk.cst.hiccup-tools.elem :as elem]))
 
 (defn top-level
@@ -15,19 +14,13 @@
         (recur parent)))))
 
 (defn skip-ahead
-  "Fast-forward the zipper at `loc` to the loc where `pred` matches the node.
-
-  If `pred` is a Hiccup node, the algorithm will test for the existence of this
-  node rather than applying the predicate function to each node."
+  "Fast-forward a zipper at `loc` to the loc where `pred` matches the node."
   [loc pred]
-  (let [pred' (if (fn? pred)
-                pred
-                #(= pred %))]
-    (loop [[node' :as loc'] loc]
-      (cond
-        (zip/end? loc) nil
-        (pred' node') loc'
-        :else (recur (zip/next loc'))))))
+  (loop [[node' :as loc'] loc]
+    (cond
+      (zip/end? loc) nil
+      (pred node') loc'
+      :else (recur (zip/next loc')))))
 
 (defn split-node
   "Split the node at `loc` into [left right] nodes.

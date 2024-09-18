@@ -66,3 +66,27 @@
   "Get a predicate for matching both tag `k` and attr `m` in a hiccup vector."
   [[k m]]
   (tag+attr k m))
+
+;; TODO: replace equality pred with an expanded version of the 'hiccup' matcher
+(defn matcher
+  "Get a predicate for matching Hiccup nodes from a piece of data `x`.
+
+  The following data types are supported:
+
+    fn       - used directly as a predicate function
+    keyword  - matches the tag
+    map      - matches the attributes
+    set      - the union of matchers constituted by the items in the set
+    other    - matches the exact data provided"
+  [x]
+  (cond
+    (fn? x) x
+    (keyword? x) (tag x)
+    (set? x) (let [tags  (when-let [ks (not-empty (filter keyword? x))]
+                           (apply tags ks))
+                   other (map matcher (remove keyword? x))]
+               (if tags
+                 (apply some-fn tags other)
+                 (apply some-fn other)))
+    (map? x) (attr x)
+    :else #(= x %)))
