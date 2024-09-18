@@ -5,7 +5,8 @@
             [hickory.zip :as hzip]
             [dk.cst.hiccup-tools.elem :as elem]
             [dk.cst.hiccup-tools.match :as match]
-            [dk.cst.hiccup-tools.zip :as z]))
+            [dk.cst.hiccup-tools.zip :as z])
+  (:refer-clojure :exclude [get]))
 
 (defn cut
   "Cut every node in `hiccup` when (pred node) is true for `pred`.
@@ -72,6 +73,11 @@
                              (when (pred node)
                                (swap! k->matches update k conj node)))
                            loc)))))))
+
+(defn get
+  "Get the first occurrence of a node matching `pred` in `hiccup`."
+  [hiccup pred]
+  (zip/node (z/skip-ahead (hzip/hiccup-zip hiccup) pred)))
 
 ;; TODO: proper support for <pre>
 (def html-conversion
@@ -158,7 +164,7 @@
                              loc))))))))
 
 (comment
-  (hiccup->text
+  (get
     [:a [:b "hej " [:c "med dig"] " der\n\n"]]
-    html-conversion)
+    (match/tag :b))
   #_.)
