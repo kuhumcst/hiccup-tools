@@ -82,11 +82,15 @@
   (cond
     (fn? x) x
     (keyword? x) (tag x)
-    (set? x) (let [tags  (when-let [ks (not-empty (filter keyword? x))]
-                           (apply tags ks))
-                   other (map matcher (remove keyword? x))]
-               (if tags
-                 (apply some-fn tags other)
-                 (apply some-fn other)))
+    (set? x) (if (empty? x)
+               (constantly false)
+               (let [tags  (when-let [ks (not-empty (filter keyword? x))]
+                             (apply tags ks))
+                     other (map matcher (remove keyword? x))]
+                 (if tags
+                   (apply some-fn tags other)
+                   (apply some-fn other))))
     (map? x) (attr x)
-    :else #(= x %)))
+    (vector? x) #(= x %)
+    :else (throw (ex-info "unsupported type of matcher:" {:input x
+                                                          :type  (type x)}))))

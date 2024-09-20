@@ -15,7 +15,25 @@
       (is (not (div-pred [:a {:id "thing"}])))
       (is (not (div-pred [:a {:id "thing"} [:span "child"]]))))))
 
-(deftest empty-attr-test
+(deftest tags-test
+  (let [pred (match/tags :div :span)]
+    (testing "any vector beginning with a :div keyword should match"
+      (is (pred [:div]))
+      (is (pred [:div {}]))
+      (is (pred [:div {:id "thing"}]))
+      (is (pred [:div {:id "thing"} [:span "child"]])))
+    (testing "any vector beginning with a :div keyword should match"
+      (is (pred [:span]))
+      (is (pred [:span {}]))
+      (is (pred [:span {:id "thing"}]))
+      (is (pred [:span {:id "thing"} [:span "child"]])))
+    (testing "other vectors should not match"
+      (is (not (pred [:a])))
+      (is (not (pred [:a {}])))
+      (is (not (pred [:a {:id "thing"}])))
+      (is (not (pred [:a {:id "thing"} [:span "child"]]))))))
+
+(deftest attr-test
   (let [empty-pred (match/attr {})
         pos-pred   (match/attr {:id true})
         neg-pred   (match/attr {:id false})
@@ -106,7 +124,7 @@
                        [:div]
                        [:span {:id    "present"
                                :class "thing"}
-                              "content"]]))
+                        "content"]]))
       (is (not (index-pred [:div
                             [:span {:id    "present"
                                     :class "thing"}
@@ -125,3 +143,42 @@
                       "content"])))
       (is (not (pred [:span {:class "thing"}
                       "content"]))))))
+
+(deftest matcher-test
+  (testing "these data types should be explicitly supported"
+    (is (fn? (match/matcher (fn []))))
+    (is (fn? (match/matcher {})))
+    (is (fn? (match/matcher #{})))
+    (is (fn? (match/matcher [:div {}])))
+    (is (fn? (match/matcher :div))))
+  (testing "these data types should not be allowed"
+    (is (thrown? Exception (fn? (match/matcher nil))))
+    (is (thrown? Exception (fn? (match/matcher "string"))))
+    (is (thrown? Exception (fn? (match/matcher 123))))
+    (is (thrown? Exception (fn? (match/matcher '())))))
+  (let [fn-pred        (match/matcher (fn [x] (and (vector? x)
+                                                   (map? (second x)))))
+        tag-pred       (match/matcher :div)
+        attr-pred      (match/matcher {:class "something"})
+        hiccup-pred    (match/matcher [:div {:class "something"}])
+        set-pred       (match/matcher #{:div :span {:id true}})
+        empty-set-pred (match/matcher #{})]
+    (testing "basic data types should result in basic matchers"
+      (is (fn-pred [:div {:class "something"}]))
+      (is (not (fn-pred [:div])))
+      (is (tag-pred [:div {:class "something"}]))
+      (is (not (tag-pred [:span {:class "something"}])))
+      (is (attr-pred [:div {:class "something"}]))
+      (is (attr-pred [:span {:class "something"}]))
+      (is (hiccup-pred [:div {:class "something"}]))
+      (is (not (hiccup-pred [:div {}]))))
+    (testing "sets should expand into a union Äof matchers"
+      (is (set-pred [:div {} "glen"]))
+      (is (set-pred [:span]))
+      (is (set-pred [:a {:id "glen" :class "something"}]))
+      (is (not (set-pred [:a {:class "something"}]))))
+    (testing "empty sets should match nothing"
+      (is (not (empty-set-pred [:div {} "glen"])))
+      (is (not (empty-set-pred [:span])))
+      (is (not (empty-set-pred [:a {:id "glen" :class "something"}])))
+      (is (not (empty-set-pred [:a {:class "something"}]))))))
