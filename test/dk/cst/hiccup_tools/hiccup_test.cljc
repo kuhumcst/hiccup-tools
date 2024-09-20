@@ -112,7 +112,7 @@
               [:a {} [:b {} 3]]
               [:d 3 [:pb {:class "thing" :id 4}]]
               [:d 4 [:e]]])))
-    (testing ":retain ::after should retain the matched element in-place after"
+    (testing ":retain :after should retain the matched element in-place after"
       (is (= (h/split (match/tag :pb) doc :retain :after)
              [:root
               [:pb {:id 1}]

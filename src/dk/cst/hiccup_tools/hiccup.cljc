@@ -58,7 +58,7 @@
                                    ;; fast-forward to the inserted node.
                                    (cond->
                                      (= retain :after)
-                                     (z/skip-ahead node)))
+                                     (z/skip-ahead #(= % node))))
                                ;; If the splitting node is the very first element,
                                ;; we must ensure that it also respects :retain!
                                (if retain
