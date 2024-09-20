@@ -18,7 +18,7 @@
   [loc pred]
   (loop [[node' :as loc'] loc]
     (cond
-      (zip/end? loc) nil
+      (zip/end? loc') nil
       (pred node') loc'
       :else (recur (zip/next loc')))))
 

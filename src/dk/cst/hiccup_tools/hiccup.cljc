@@ -85,7 +85,9 @@
 (defn get
   "Get the first occurrence of a node matching `matcher` in `hiccup`."
   [hiccup matcher]
-  (zip/node (z/skip-ahead (hzip/hiccup-zip hiccup) (match/matcher matcher))))
+  (some-> (hzip/hiccup-zip hiccup)
+          (z/skip-ahead (match/matcher matcher))
+          (zip/node)))
 
 ;; TODO: proper support for <pre>
 (def html-conversion

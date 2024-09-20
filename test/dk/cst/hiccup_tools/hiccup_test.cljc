@@ -63,6 +63,27 @@
                       [:d 3 [:pb {:id 5, :class "thing"}] 4 [:e]]
                       [:e]]})))))
 
+(deftest get-test
+  (let [doc [:root
+             [:pb {:id 1}]
+             [:a {:id 2}
+              [:b {}
+               [:c {:id 3} 1 [:pb {:id 4}] 2]
+               2 [:pb] 3]]
+             [:d
+              3
+              [:pb {:id 5 :class "thing"}]
+              4
+              [:e]]]]
+    (testing "get should return the first occurrence of a matching node"
+      (is (= (h/get doc (match/hiccup [:pb {:id    true
+                                            :class false}]))
+             [:pb {:id 1}]))
+      (is (= (h/get doc (match/attr {:id 3}))
+             [:c {:id 3} 1 [:pb {:id 4}] 2]))
+      (is (= (h/get doc (match/attr {:id false}))
+             doc)))))
+
 (deftest split-test
   (let [doc [:root
              [:pb {:id 1}]
