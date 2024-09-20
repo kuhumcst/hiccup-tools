@@ -1,5 +1,6 @@
 (ns dk.cst.hiccup-tools.hiccup-test
   (:require [clojure.test :refer [deftest is testing]]
+            [dk.cst.hiccup-tools.example :as example]
             [dk.cst.hiccup-tools.hiccup :as h]
             [dk.cst.hiccup-tools.match :as match]))
 
@@ -44,8 +45,8 @@
               4
               [:e]]]]
     (testing "searches should recursively find every matching element"
-      (is (= (h/search doc {:pb     (match/hiccup [:pb {:id    true
-                                                        :class false}])
+      (is (= (h/search doc {:pb    (match/hiccup [:pb {:id    true
+                                                       :class false}])
                             :id    (match/attr {:id true})
                             :no-id (match/attr {:id false})})
              {:pb    [[:pb {:id 1}] [:pb {:id 4}]],
@@ -142,3 +143,8 @@
               [:a {} [:b {} [:pb {:id 3}] 3]]
               [:d 3]
               [:d [:pb {:id 4, :class "thing"}] 4 [:e]]])))))
+
+;; TODO: improve this test, mostly by improving HTML conversion itself
+(deftest hiccup->text-test
+  (is (= (h/hiccup->text example/html5 h/html-conversion)
+         (slurp "test/example.txt"))))
