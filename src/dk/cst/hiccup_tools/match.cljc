@@ -45,7 +45,7 @@
               (when (not v)
                 (recur m')))))))))
 
-(defn child
+(defn has-child
   "Get a predicate matching elements where `pred` is true for at least one of
   the children. If `index` is supplied, the child must match the exact position.
 
@@ -69,6 +69,18 @@
          (when (and (vector? child)
                     (pred (hzip/hickory-zip child)))
            parent))))))
+
+(defn has-parent
+  "Get a predicate matching elements where `pred` is true for its parent.
+
+  This can compose with other predicates, e.g. those from this namespace:
+
+    (parent (attr {:class \"label\"}))
+
+  The above matches the child element of the parent with the :class `label`."
+  [pred]
+  (fn [loc]
+    (some-> loc zip/up pred)))
 
 (defn tag+attr
   "Get a predicate for matching both tag `k` and attr `m`."

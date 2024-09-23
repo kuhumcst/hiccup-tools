@@ -93,12 +93,12 @@
       (is (not (pred [:span {:class "thing"}
                       "content"]))))))
 
-(deftest child-test
-  (let [pred       (comp-zip (match/child (match/tag+attr :span {:id    true
-                                                                 :class "thing"})))
-        index-pred (comp-zip (match/child (match/tag+attr :span {:id    true
-                                                                 :class "thing"})
-                                          1))]
+(deftest has-child-test
+  (let [pred       (comp-zip (match/has-child (match/tag+attr :span {:id    true
+                                                                     :class "thing"})))
+        index-pred (comp-zip (match/has-child (match/tag+attr :span {:id    true
+                                                                     :class "thing"})
+                                              1))]
     (testing "should only match direct children"
       (is (pred [:div
                  [:span {:id    "present"
@@ -137,6 +137,38 @@
                                     :class "thing"}
                              "content"]
                             [:div]]))))))
+
+(deftest has-parent-test
+  (let [skip (fn [n hiccup]
+               (->> (hiccup-zip hiccup)
+                    (iterate zip/next)
+                    (take (inc n))
+                    (last)))
+        pred (match/has-parent (match/tag+attr :div {:id    true
+                                                     :class "thing"}))]
+    (testing "should only match direct ancestor"
+      (is (pred (skip 1 [:div {:id    "present"
+                               :class "thing"}
+                         [:span
+                          "content"]])))
+      (is (pred (skip 2 [:div
+                         [:div {:id    "present"
+                                :class "thing"}
+                          [:span
+                           "content"]]])))
+      (is (not (pred (skip 0 [:div {:id    "present"
+                                    :class "thing"}]))))
+      (is (not (pred (skip 2 [:div {:id    "present"
+                                    :class "thing"}
+                              [:div
+                               [:span
+                                "content"]]])))))
+    (testing "number or order of children should not matter"
+      (is (pred (skip 2 [:div {:id    "present"
+                               :class "thing"}
+                         [:span]
+                         [:span]
+                         [:span]]))))))
 
 (deftest hiccup-test
   (let [pred (comp-zip (match/hiccup [:span {:id    true
