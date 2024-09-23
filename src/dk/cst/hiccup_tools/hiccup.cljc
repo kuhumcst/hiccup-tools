@@ -118,7 +118,7 @@
     {:aria-hidden "true"}
     zip/remove}
 
-   :post
+   :postprocess
    (fn [s]
      (-> s
          (str/trim)
@@ -160,7 +160,7 @@
   return a converted loc, e.g. with a whitespace generating fn inserted.
 
   See 'html-conversion' for an example of how to build a pred->convert mapping."
-  [hiccup & [{:keys [conversions post] :as opts}]]
+  [hiccup & [{:keys [conversions postprocess] :as opts}]]
   (let [text-nodes   (atom [])
         conversions' (update-keys conversions match/matcher)]
     (loop [[node :as loc] (hzip/hiccup-zip hiccup)]
@@ -168,7 +168,7 @@
         (->> @text-nodes
              (map trim-extra)
              (apply str)
-             (post))
+             (postprocess))
         (recur (zip/next (if (vector? node)
                            (run-conversions loc conversions')
                            (do
