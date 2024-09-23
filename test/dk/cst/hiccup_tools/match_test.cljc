@@ -1,9 +1,16 @@
 (ns dk.cst.hiccup-tools.match-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.zip :as zip]
+            [hickory.zip :refer [hiccup-zip]]
             [dk.cst.hiccup-tools.match :as match]))
 
+;; Helper function so that all matchers are fed zipper locs
+(defn comp-zip
+  [matcher]
+  (comp matcher hiccup-zip))
+
 (deftest tag-test
-  (let [div-pred (match/tag :div)]
+  (let [div-pred (comp-zip (match/tag :div))]
     (testing "any vector beginning with a :div keyword should match"
       (is (div-pred [:div]))
       (is (div-pred [:div {}]))
@@ -16,7 +23,7 @@
       (is (not (div-pred [:a {:id "thing"} [:span "child"]]))))))
 
 (deftest tags-test
-  (let [pred (match/tags :div :span)]
+  (let [pred (comp-zip (match/tags :div :span))]
     (testing "any vector beginning with a :div keyword should match"
       (is (pred [:div]))
       (is (pred [:div {}]))
@@ -34,13 +41,13 @@
       (is (not (pred [:a {:id "thing"} [:span "child"]]))))))
 
 (deftest attr-test
-  (let [empty-pred (match/attr {})
-        pos-pred   (match/attr {:id true})
-        neg-pred   (match/attr {:id false})
-        val-pred   (match/attr {:id "thing"})
-        combo-pred (match/attr {:id    false
-                                :class true
-                                :key   "thing"})]
+  (let [empty-pred (comp-zip (match/attr {}))
+        pos-pred   (comp-zip (match/attr {:id true}))
+        neg-pred   (comp-zip (match/attr {:id false}))
+        val-pred   (comp-zip (match/attr {:id "thing"}))
+        combo-pred (comp-zip (match/attr {:id    false
+                                          :class true
+                                          :key   "thing"}))]
     (testing "empty attr should match any vector"
       (is (empty-pred [:div]))
       (is (empty-pred [:div {}]))
@@ -74,8 +81,8 @@
                                   :key   "other"}]))))))
 
 (deftest tag+attr-test
-  (let [pred (match/tag+attr :span {:id    true
-                                    :class "thing"})]
+  (let [pred (comp-zip (match/tag+attr :span {:id    true
+                                              :class "thing"}))]
     (testing "the combination of tag+attr should match both"
       (is (pred [:span {:id    "present"
                         :class "thing"}
@@ -87,11 +94,11 @@
                       "content"]))))))
 
 (deftest child-test
-  (let [pred       (match/child (match/tag+attr :span {:id    true
-                                                       :class "thing"}))
-        index-pred (match/child (match/tag+attr :span {:id    true
-                                                       :class "thing"})
-                                1)]
+  (let [pred       (comp-zip (match/child (match/tag+attr :span {:id    true
+                                                                 :class "thing"})))
+        index-pred (comp-zip (match/child (match/tag+attr :span {:id    true
+                                                                 :class "thing"})
+                                          1))]
     (testing "should only match direct children"
       (is (pred [:div
                  [:span {:id    "present"
@@ -132,8 +139,8 @@
                             [:div]]))))))
 
 (deftest hiccup-test
-  (let [pred (match/hiccup [:span {:id    true
-                                   :class "thing"}])]
+  (let [pred (comp-zip (match/hiccup [:span {:id    true
+                                             :class "thing"}]))]
     (testing "the destructured Hiccup combination of tag+attr should match both"
       (is (pred [:span {:id    "present"
                         :class "thing"}
@@ -156,13 +163,14 @@
     (is (thrown? Exception (fn? (match/matcher "string"))))
     (is (thrown? Exception (fn? (match/matcher 123))))
     (is (thrown? Exception (fn? (match/matcher '())))))
-  (let [fn-pred        (match/matcher (fn [x] (and (vector? x)
-                                                   (map? (second x)))))
-        tag-pred       (match/matcher :div)
-        attr-pred      (match/matcher {:class "something"})
-        hiccup-pred    (match/matcher [:div {:class "something"}])
-        set-pred       (match/matcher #{:div :span {:id true}})
-        empty-set-pred (match/matcher #{})]
+  (let [fn-pred        (comp-zip (match/matcher (fn [comp-zip]
+                                                  (and (zip/branch? comp-zip)
+                                                       (map? (second (zip/node comp-zip)))))))
+        tag-pred       (comp-zip (match/matcher :div))
+        attr-pred      (comp-zip (match/matcher {:class "something"}))
+        hiccup-pred    (comp-zip (match/matcher [:div {:class "something"}]))
+        set-pred       (comp-zip (match/matcher #{:div :span {:id true}}))
+        empty-set-pred (comp-zip (match/matcher #{}))]
     (testing "basic data types should result in basic matchers"
       (is (fn-pred [:div {:class "something"}]))
       (is (not (fn-pred [:div])))

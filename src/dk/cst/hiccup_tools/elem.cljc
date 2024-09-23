@@ -3,8 +3,9 @@
 
 (defn attr
   [[tag attr]]
-  (when (map? attr)
-    attr))
+  (if (map? attr)
+    attr
+    {}))
 
 (defn head
   [[tag attr]]

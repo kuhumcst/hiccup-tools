@@ -1,19 +1,29 @@
 (ns dk.cst.hiccup-tools.match
-  "Predicates for matching against Hiccup vectors."
-  (:require [dk.cst.hiccup-tools.elem :as elem]))
+  "Predicates for matching against Hiccup vector locs in a zipper."
+  (:require [dk.cst.hiccup-tools.elem :as elem]
+            [hickory.zip :as hzip]
+            [clojure.zip :as zip]))
+
+;; helper function
+(defn- loc->node
+  [loc]
+  (when (zip/branch? loc)
+    (zip/node loc)))
 
 (defn tag
   "Get a predicate for matching elements with the tag `k`."
   [k]
-  #(and (vector? %)
-        (= (first %) k)))
+  (fn [loc]
+    (when-let [[tag] (loc->node loc)]
+      (= tag k))))
 
 (defn tags
   "Get a predicate for matching elements with the tags in `kset`."
   [& ks]
   (let [kset (set ks)]
-    #(and (vector? %)
-          (get kset (first %)))))
+    (fn [loc]
+      (when-let [node (loc->node loc)]
+        (get kset (first node))))))
 
 (defn attr
   "Get a predicate for matching elements with attribute maps matching `m`.
@@ -22,19 +32,18 @@
   whilst a value of nil/false can be used to match on the absence of the key.
   Any other values must match *directly* with the values of the attr map."
   [m]
-  #(when (vector? %)
-     (let [attr (if (map? (second %))
-                  (second %)
-                  {})]
-       (loop [[[k v] & m'] m]
-         (if (nil? k)
-           true
-           (if (contains? attr k)
-             (when (or (true? v)
-                       (= (get attr k) v))
-               (recur m'))
-             (when (not v)
-               (recur m'))))))))
+  (fn [loc]
+    (when-let [node (loc->node loc)]
+      (let [attr (elem/attr node)]
+        (loop [[[k v] & m'] m]
+          (if (nil? k)
+            true
+            (if (contains? attr k)
+              (when (or (true? v)
+                        (= (get attr k) v))
+                (recur m'))
+              (when (not v)
+                (recur m')))))))))
 
 (defn child
   "Get a predicate matching elements where `pred` is true for at least one of
@@ -44,18 +53,22 @@
 
     (child (attr {:class \"label\"}))
 
-  The above matches an element containing a child with the :class `label`."
+  The above matches the parent element of a child with the :class `label`."
   ([pred]
-   #(when (vector? %)
-      (loop [[node & nodes] (elem/children %)]
-        (cond
-          (pred node) node
-          nodes (recur nodes)))))
+   (fn [loc]
+     (when-let [parent (loc->node loc)]
+       (loop [[child & children] (zip/children loc)]
+         (cond
+           (and (vector? child)
+                (pred (hzip/hickory-zip child))) parent
+           children (recur children))))))
   ([pred index]
-   #(when (vector? %)
-      (let [child (nth (elem/children %) index)]
-        (when (pred child)
-          child)))))
+   (fn [loc]
+     (when-let [parent (loc->node loc)]
+       (let [child (nth (elem/children parent) index)]
+         (when (and (vector? child)
+                    (pred (hzip/hickory-zip child)))
+           parent))))))
 
 (defn tag+attr
   "Get a predicate for matching both tag `k` and attr `m`."
@@ -67,7 +80,6 @@
   [[k m]]
   (tag+attr k m))
 
-;; TODO: replace equality pred with an expanded version of the 'hiccup' matcher
 (defn matcher
   "Get a predicate for matching Hiccup nodes from a piece of data `x`.
 
@@ -91,6 +103,9 @@
                    (apply some-fn tags other)
                    (apply some-fn other))))
     (map? x) (attr x)
-    (vector? x) #(= x %)
+    ;; TODO: replace equality pred with an expanded version of 'hiccup' matcher
+    (vector? x) (fn [loc]
+                  (when-let [node (loc->node loc)]
+                    (= x node)))
     :else (throw (ex-info "unsupported type of matcher:" {:input x
                                                           :type  (type x)}))))

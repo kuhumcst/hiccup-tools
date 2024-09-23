@@ -14,22 +14,22 @@
   (:refer-clojure :exclude [get]))
 
 (defn cut
-  "Cut every node in `hiccup` whenever the `matcher` matches the node.
+  "Cut every node in `hiccup` whenever the `matcher` matches the node at loc.
   The cut nodes are returned as metadata under the :matches key."
   [matcher hiccup]
   (let [pred    (match/matcher matcher)
         matches (atom [])]
-    (loop [[node :as loc] (hzip/hiccup-zip hiccup)]
+    (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (with-meta (zip/root loc) {:matches (not-empty @matches)})
-        (recur (zip/next (if (pred node)
+        (recur (zip/next (if (pred loc)
                            (do
-                             (swap! matches conj node)
+                             (swap! matches conj (zip/node loc))
                              (zip/remove loc))
                            loc)))))))
 
 (defn split
-  "Structurally split `hiccup` whenever the `matcher` matches the node.
+  "Structurally split `hiccup` whenever the `matcher` matches the node at loc.
   The split proceeds all the way down to the children of the root node.
 
   The splitting node can be retained by setting the :retain option, e.g.
@@ -41,10 +41,12 @@
   By default, the node will not be retained."
   [matcher hiccup & {:keys [retain] :as opts}]
   (let [pred (match/matcher matcher)]
-    (loop [[node :as loc] (hzip/hiccup-zip hiccup)]
+    (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (zip/root loc)
-        (recur (zip/next (if (pred node)
+        (recur (zip/next (if (do
+                               (prn (zip/node loc))
+                               (pred loc))
                            (let [[before after :as res] (z/split-tree loc opts)]
                              (if before
                                ;; The usual case (split occurs after some content)
@@ -52,13 +54,16 @@
                                    (zip/insert-left before)
                                    (cond->
                                      (= retain :between)
-                                     (zip/insert-left node))
+                                     (zip/insert-left (zip/node loc)))
                                    (zip/replace after)
                                    ;; To avoid an infinite loop, we must
                                    ;; fast-forward to the inserted node.
                                    (cond->
                                      (= retain :after)
-                                     (z/skip-ahead #(= % node))))
+                                     (z/skip-ahead (let [node (zip/node loc)]
+                                                     (fn [candidate]
+                                                       (= (zip/node candidate)
+                                                          node))))))
                                ;; If the splitting node is the very first element,
                                ;; we must ensure that it also respects :retain!
                                (if retain
@@ -67,19 +72,18 @@
                            ;; No split, just proceed.
                            loc)))))))
 
-;; TODO: use clojure.walk instead? probably much faster
 (defn search
   "Return a mapping from k->matches in `hiccup` for every pred in `k->matcher`."
   [hiccup k->matcher]
   (let [k->pred    (update-vals k->matcher match/matcher)
         k->matches (atom (zipmap (keys k->matcher) (repeat [])))]
-    (loop [[node :as loc] (hzip/hiccup-zip hiccup)]
+    (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (not-empty @k->matches)
         (recur (zip/next (do
                            (doseq [[k pred] k->pred]
-                             (when (pred node)
-                               (swap! k->matches update k conj node)))
+                             (when (pred loc)
+                               (swap! k->matches update k conj (zip/node loc))))
                            loc)))))))
 
 (defn get
@@ -133,9 +137,9 @@
 
   These convert fns are responsible for appending special fns to create needed
   whitespace when the final text string is produced in the 'text' fn below."
-  [[node :as loc] conversions]
+  [loc conversions]
   (loop [[[pred convert] & rem] conversions]
-    (if (and pred (pred node) convert)
+    (if (and pred (pred loc) convert)
       (convert loc)
       (if rem
         (recur rem)
@@ -163,15 +167,15 @@
   [hiccup & [{:keys [conversions postprocess] :as opts}]]
   (let [text-nodes   (atom [])
         conversions' (update-keys conversions match/matcher)]
-    (loop [[node :as loc] (hzip/hiccup-zip hiccup)]
+    (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (->> @text-nodes
              (map trim-extra)
              (apply str)
              (postprocess))
-        (recur (zip/next (if (vector? node)
+        (recur (zip/next (if (zip/branch? loc)
                            (run-conversions loc conversions')
-                           (do
+                           (let [node (zip/node loc)]
                              (when (string? node)
                                (swap! text-nodes conj node))
                              loc))))))))

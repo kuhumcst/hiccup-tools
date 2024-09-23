@@ -1,0 +1,60 @@
+HTML5 Example Page
+
+Home
+About
+Contact
+
+This is a headline
+
+This paragraph is nested inside an article. It contains basic tags likeanchors,strong,emphasis, andunderline. It providesdeleted textas well, which often gets replaced withinsertedtext.
+
+This is subheadline for more content
+
+Unordered lists have basic style
+They use the circle list style
+Nested list item one
+Nested list item two
+
+Just one more list item
+
+Ordered lists also have basic style
+They use the decimal list style
+Nested list item one
+Nested list item two
+
+Last list item
+
+This is some advanced content
+
+[image: Description of the first image]Caption for the first image
+
+[image: Description of the second image]Caption for the second image
+
+[image: Description of a single image without a caption]
+Anchor button
+
+“Infamous quote”
+- Attribution
+
+Expandable title
+Revealed content
+Another expandable title
+More revealed content
+
+This is a code example
+
+.some-class { background-color: red;}
+
+This is another headline
+This is a boxed element.This is yet another boxed element.
+This is a table
+
+NameQuantityPrice
+
+Cheese fondue 1 EUR 23 
+Pizza 10 EUR 10.000,00 
+Waffles 1 EUR 14,30 
+
+And this is a form
+
+Made withhtml5example.com

@@ -16,10 +16,10 @@
 (defn skip-ahead
   "Fast-forward a zipper at `loc` to the loc where `pred` matches the node."
   [loc pred]
-  (loop [[node' :as loc'] loc]
+  (loop [loc' loc]
     (cond
       (zip/end? loc') nil
-      (pred node') loc'
+      (pred loc') loc'
       :else (recur (zip/next loc')))))
 
 (defn split-node
@@ -50,7 +50,7 @@
 (defn split-tree
   "Return [left right] for the structural split at `loc`; the top-level :loc
   of the split is returned as metadata, e.g. for use with zip/replace."
-  [[node :as loc] & {:keys [retain] :as opts}]
+  [loc & {:keys [retain] :as opts}]
   (loop [loc   loc
          left  nil
          right nil]
