@@ -13,6 +13,7 @@
 (defn tag
   "Get a predicate for matching elements with the tag `k`."
   [k]
+  (assert (keyword? k))
   (fn [loc]
     (when-let [[tag] (loc->node loc)]
       (= tag k))))
@@ -20,6 +21,7 @@
 (defn tags
   "Get a predicate for matching elements with the tags in `kset`."
   [& ks]
+  (assert (every? keyword? ks))
   (let [kset (set ks)]
     (fn [loc]
       (when-let [node (loc->node loc)]
@@ -32,6 +34,7 @@
   whilst a value of nil/false can be used to match on the absence of the key.
   Any other values must match *directly* with the values of the attr map."
   [m]
+  (assert (map? m))
   (fn [loc]
     (when-let [node (loc->node loc)]
       (let [attr (elem/attr node)]
@@ -55,6 +58,7 @@
 
   The above matches the parent element of a child with the :class `label`."
   ([pred]
+   (assert (fn? pred))
    (fn [loc]
      (when-let [parent (loc->node loc)]
        (loop [[child & children] (zip/children loc)]
@@ -63,6 +67,8 @@
                 (pred (hzip/hickory-zip child))) parent
            children (recur children))))))
   ([pred index]
+   (assert (fn? pred))
+   (assert (number? index))
    (fn [loc]
      (when-let [parent (loc->node loc)]
        (let [child (nth (elem/children parent) index)]
@@ -79,6 +85,7 @@
 
   The above matches the child element of the parent with the :class `label`."
   [pred]
+  (assert (fn? pred))
   (fn [loc]
     (some-> loc zip/up pred)))
 
