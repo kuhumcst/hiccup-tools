@@ -73,18 +73,38 @@
                            loc)))))))
 
 (defn search
-  "Return a mapping from k->matches in `hiccup` for every pred in `k->matcher`."
-  [hiccup k->matcher]
+  "Return a mapping from k->matches in `hiccup` for every pred in `k->matcher`.
+
+  By default, children of matched nodes are skipped. You may optionally specify
+  :exhaustive true if the search should continue within matched nodes too."
+  [hiccup k->matcher & {:keys [exhaustive] :as opts
+                        :or   {exhaustive false}}]
   (let [k->pred    (update-vals k->matcher match/matcher)
         k->matches (atom (zipmap (keys k->matcher) (repeat [])))]
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
-        (not-empty @k->matches)
-        (recur (zip/next (do
-                           (doseq [[k pred] k->pred]
-                             (when (pred loc)
-                               (swap! k->matches update k conj (zip/node loc))))
-                           loc)))))))
+        (->> (remove (comp empty? second) @k->matches)
+             (into {})
+             (not-empty))
+        (recur (zip/next (loop [[[k pred] & k->pred'] k->pred]
+                           (cond
+                             (and k pred (pred loc))
+                             (do
+                               (swap! k->matches update k conj (zip/node loc))
+                               (if exhaustive
+                                 (recur k->pred')
+
+                                 ;; Non-exhaustive searches remove matches from
+                                 ;; the tree, but we must simulate an early end
+                                 ;; to avoid potentially removing the root.
+                                 (if (nil? (zip/path loc))
+                                   [(zip/node loc) :end]
+                                   (zip/remove loc))))
+
+                             (not-empty k->pred')
+                             (recur k->pred')
+
+                             :else loc))))))))
 
 (defn get
   "Get the first occurrence of a node matching `matcher` in `hiccup`."

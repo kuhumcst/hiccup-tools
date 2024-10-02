@@ -44,11 +44,12 @@
               [:pb {:id 5 :class "thing"}]
               4
               [:e]]]]
-    (testing "searches should recursively find every matching element"
+    (testing "exhaustive searches should find every matching element"
       (is (= (h/search doc {:pb    (match/hiccup [:pb {:id    true
                                                        :class false}])
                             :id    (match/attr {:id true})
-                            :no-id (match/attr {:id false})})
+                            :no-id (match/attr {:id false})}
+                       :exhaustive true)
              {:pb    [[:pb {:id 1}] [:pb {:id 4}]],
               :id    [[:pb {:id 1}]
                       [:a {:id 2} [:b {} [:c {:id 3} 1 [:pb {:id 4}] 2] 2 [:pb] 3]]
@@ -62,7 +63,38 @@
                       [:b {} [:c {:id 3} 1 [:pb {:id 4}] 2] 2 [:pb] 3]
                       [:pb]
                       [:d 3 [:pb {:id 5, :class "thing"}] 4 [:e]]
-                      [:e]]})))))
+                      [:e]]})))
+    (testing "non-exhaustive searches should find outer matching elements"
+      (is (= (h/search doc {:pb    (match/hiccup [:pb {:id    true
+                                                       :class false}])
+                            :id    (match/attr {:id true})
+                            :no-id (every-pred
+                                     ;; NOTE: to avoid matching the root
+                                     (complement (match/tag :root))
+                                     (match/attr {:id false}))}
+                       :exhaustive false)
+             {:id    [[:a {:id 2}
+                       [:b {}
+                        [:c {:id 3} 1
+                         [:pb {:id 4}]
+                         2]
+                        2
+                        [:pb]
+                        3]]]
+              :no-id [[:d 3
+                       [:pb {:class "thing"
+                             :id    5}]
+                       4
+                       [:e]]]
+              :pb    [[:pb {:id 1}]]})))
+    (testing "a matching root element should terminate the search early"
+      (is (= (h/search doc {:pb    (match/hiccup [:pb {:id    true
+                                                       :class false}])
+                            :id    (match/attr {:id true})
+                            ;; matches the root element
+                            :no-id (match/attr {:id false})}
+                       :exhaustive false)
+             {:no-id [doc]})))))
 
 (deftest get-test
   (let [doc [:root
