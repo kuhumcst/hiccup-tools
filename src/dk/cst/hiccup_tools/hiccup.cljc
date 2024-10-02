@@ -8,6 +8,7 @@
   (:require [clojure.zip :as zip]
             [clojure.string :as str]
             [hickory.zip :as hzip]
+            [dk.cst.hiccup-tools.helper :as helper]
             [dk.cst.hiccup-tools.elem :as elem]
             [dk.cst.hiccup-tools.match :as match]
             [dk.cst.hiccup-tools.zip :as z])
@@ -79,8 +80,8 @@
   :exhaustive true if the search should continue within matched nodes too."
   [hiccup k->matcher & {:keys [exhaustive] :as opts
                         :or   {exhaustive false}}]
-  (let [k->pred    (update-vals k->matcher match/matcher)
-        k->matches (atom (zipmap (keys k->matcher) (repeat [])))]
+  (let [k->pred    (helper/update-kv-vals k->matcher match/matcher)
+        k->matches (atom (zipmap (map first k->matcher) (repeat [])))]
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (->> (remove (comp empty? second) @k->matches)
@@ -204,4 +205,9 @@
   (search
     [:a [:b "hej " [:c {:id "blabla"} "med dig"] " der\n\n"]]
     {:matches #{:b {:id true}}})
+
+  ;; kvs test
+  (search
+    [:a [:b "hej " [:c {:id "blabla"} "med dig"] " der\n\n"]]
+    [[:matches #{:b {:id true}}]])
   #_.)
