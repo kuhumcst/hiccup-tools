@@ -94,6 +94,7 @@
   [k m]
   (every-pred (tag k) (attr m)))
 
+;; TODO: expand to include some element of child matching too
 (defn hiccup
   "Get a predicate for matching both tag `k` and attr `m` in a hiccup vector."
   [[k m]]
@@ -125,10 +126,7 @@
                     (apply some-fn tags other)
                     (apply some-fn other))))
      (map? x) (attr x)
-     ;; TODO: replace equality pred with an expanded version of 'hiccup' matcher
-     (vector? x) (fn [loc]
-                   (when-let [node (loc->node loc)]
-                     (= x node)))
+     (vector? x) (hiccup x)
      :else (throw (ex-info "unsupported type of matcher:" {:input x
                                                            :type  (type x)}))))
   ([x & xs]

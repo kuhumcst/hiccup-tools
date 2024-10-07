@@ -210,9 +210,12 @@
       (is (tag-pred [:div {:class "something"}]))
       (is (not (tag-pred [:span {:class "something"}])))
       (is (attr-pred [:div {:class "something"}]))
-      (is (attr-pred [:span {:class "something"}]))
+      (is (attr-pred [:span {:class "something"}])))
+    (testing "the hiccup matcher should match Hiccup loosely, not just exact"
       (is (hiccup-pred [:div {:class "something"}]))
-      (is (not (hiccup-pred [:div {}]))))
+      (is (hiccup-pred [:div {:class "something"} "child"]))
+      (is (not (hiccup-pred [:div {}])))
+      (is (not (hiccup-pred [:span {} [:div {:class "something"}]]))))
     (testing "sets should expand into a union of matchers"
       (is (set-pred [:div {} "glen"]))
       (is (set-pred [:span]))
