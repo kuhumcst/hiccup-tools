@@ -99,32 +99,37 @@
   [[k m]]
   (tag+attr k m))
 
-(defn matcher
-  "Get a predicate for matching Hiccup nodes from a piece of data `x`.
+(defn match
+  "Get a predicate to match Hiccup locs based on a piece of compatible data `x`.
 
-  The following data types are supported:
+  If multiple `xs` are given as arguments, a combined matcher is returned which
+  must satisfy all these aspects simultaneously.
+
+  The following data types are supported for matchers:
 
     fn       - used directly as a predicate function
     keyword  - matches the tag
     map      - matches the attributes
     set      - the union of matchers constituted by the items in the set
     other    - matches the exact data provided"
-  [x]
-  (cond
-    (fn? x) x
-    (keyword? x) (tag x)
-    (set? x) (if (empty? x)
-               (constantly false)
-               (let [tags  (when-let [ks (not-empty (filter keyword? x))]
-                             (apply tags ks))
-                     other (map matcher (remove keyword? x))]
-                 (if tags
-                   (apply some-fn tags other)
-                   (apply some-fn other))))
-    (map? x) (attr x)
-    ;; TODO: replace equality pred with an expanded version of 'hiccup' matcher
-    (vector? x) (fn [loc]
-                  (when-let [node (loc->node loc)]
-                    (= x node)))
-    :else (throw (ex-info "unsupported type of matcher:" {:input x
-                                                          :type  (type x)}))))
+  ([x]
+   (cond
+     (fn? x) x
+     (keyword? x) (tag x)
+     (set? x) (if (empty? x)
+                (constantly false)
+                (let [tags  (when-let [ks (not-empty (filter keyword? x))]
+                              (apply tags ks))
+                      other (map match (remove keyword? x))]
+                  (if tags
+                    (apply some-fn tags other)
+                    (apply some-fn other))))
+     (map? x) (attr x)
+     ;; TODO: replace equality pred with an expanded version of 'hiccup' matcher
+     (vector? x) (fn [loc]
+                   (when-let [node (loc->node loc)]
+                     (= x node)))
+     :else (throw (ex-info "unsupported type of matcher:" {:input x
+                                                           :type  (type x)}))))
+  ([x & xs]
+   (apply every-pred (match x) (map match xs))))

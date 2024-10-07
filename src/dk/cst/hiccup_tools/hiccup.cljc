@@ -18,7 +18,7 @@
   "Cut every node in `hiccup` whenever the `matcher` matches the node at loc.
   The cut nodes are returned as metadata under the :matches key."
   [matcher hiccup]
-  (let [pred    (match/matcher matcher)
+  (let [pred    (match/match matcher)
         matches (atom [])]
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
@@ -41,7 +41,7 @@
 
   By default, the node will not be retained."
   [matcher hiccup & {:keys [retain] :as opts}]
-  (let [pred (match/matcher matcher)]
+  (let [pred (match/match matcher)]
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (zip/root loc)
@@ -80,7 +80,7 @@
   :exhaustive true if the search should continue within matched nodes too."
   [hiccup k->matcher & {:keys [exhaustive] :as opts
                         :or   {exhaustive false}}]
-  (let [k->pred    (helper/update-kv-vals k->matcher match/matcher)
+  (let [k->pred    (helper/update-kv-vals k->matcher match/match)
         k->matches (atom (zipmap (map first k->matcher) (repeat [])))]
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
@@ -111,7 +111,7 @@
   "Get the first occurrence of a node matching `matcher` in `hiccup`."
   [hiccup matcher]
   (some-> (hzip/hiccup-zip hiccup)
-          (z/skip-ahead (match/matcher matcher))
+          (z/skip-ahead (match/match matcher))
           (zip/node)))
 
 ;; TODO: proper support for <pre>
@@ -187,7 +187,7 @@
   See 'html-conversion' for an example of how to build a pred->convert mapping."
   [hiccup & [{:keys [conversions postprocess] :as opts}]]
   (let [text-nodes   (atom [])
-        conversions' (update-keys conversions match/matcher)]
+        conversions' (update-keys conversions match/match)]
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (->> @text-nodes

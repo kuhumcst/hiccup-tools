@@ -185,24 +185,25 @@
 
 (deftest matcher-test
   (testing "these data types should be explicitly supported"
-    (is (fn? (match/matcher (fn []))))
-    (is (fn? (match/matcher {})))
-    (is (fn? (match/matcher #{})))
-    (is (fn? (match/matcher [:div {}])))
-    (is (fn? (match/matcher :div))))
+    (is (fn? (match/match (fn []))))
+    (is (fn? (match/match {})))
+    (is (fn? (match/match #{})))
+    (is (fn? (match/match [:div {}])))
+    (is (fn? (match/match :div))))
   (testing "these data types should not be allowed"
-    (is (thrown? Exception (fn? (match/matcher nil))))
-    (is (thrown? Exception (fn? (match/matcher "string"))))
-    (is (thrown? Exception (fn? (match/matcher 123))))
-    (is (thrown? Exception (fn? (match/matcher '())))))
-  (let [fn-pred        (comp-zip (match/matcher (fn [comp-zip]
-                                                  (and (zip/branch? comp-zip)
-                                                       (map? (second (zip/node comp-zip)))))))
-        tag-pred       (comp-zip (match/matcher :div))
-        attr-pred      (comp-zip (match/matcher {:class "something"}))
-        hiccup-pred    (comp-zip (match/matcher [:div {:class "something"}]))
-        set-pred       (comp-zip (match/matcher #{:div :span {:id true}}))
-        empty-set-pred (comp-zip (match/matcher #{}))]
+    (is (thrown? Exception (fn? (match/match nil))))
+    (is (thrown? Exception (fn? (match/match "string"))))
+    (is (thrown? Exception (fn? (match/match 123))))
+    (is (thrown? Exception (fn? (match/match '())))))
+  (let [fn-pred        (comp-zip (match/match (fn [comp-zip]
+                                                (and (zip/branch? comp-zip)
+                                                     (map? (second (zip/node comp-zip)))))))
+        tag-pred       (comp-zip (match/match :div))
+        attr-pred      (comp-zip (match/match {:class "something"}))
+        hiccup-pred    (comp-zip (match/match [:div {:class "something"}]))
+        set-pred       (comp-zip (match/match #{:div :span {:id true}}))
+        empty-set-pred (comp-zip (match/match #{}))
+        combo-pred     (comp-zip (match/match :a {:id true} {:class true}))]
     (testing "basic data types should result in basic matchers"
       (is (fn-pred [:div {:class "something"}]))
       (is (not (fn-pred [:div])))
@@ -212,7 +213,7 @@
       (is (attr-pred [:span {:class "something"}]))
       (is (hiccup-pred [:div {:class "something"}]))
       (is (not (hiccup-pred [:div {}]))))
-    (testing "sets should expand into a union Äof matchers"
+    (testing "sets should expand into a union of matchers"
       (is (set-pred [:div {} "glen"]))
       (is (set-pred [:span]))
       (is (set-pred [:a {:id "glen" :class "something"}]))
@@ -221,4 +222,8 @@
       (is (not (empty-set-pred [:div {} "glen"])))
       (is (not (empty-set-pred [:span])))
       (is (not (empty-set-pred [:a {:id "glen" :class "something"}])))
-      (is (not (empty-set-pred [:a {:class "something"}]))))))
+      (is (not (empty-set-pred [:a {:class "something"}]))))
+    (testing "matcher combinations must match every pred"
+      (is (combo-pred [:a {:id "glen" :class "something"} "child"]))
+      (is (not (combo-pred [:a {:id "glen"}])))
+      (is (not (combo-pred [:a]))))))
