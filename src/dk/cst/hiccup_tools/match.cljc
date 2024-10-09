@@ -100,6 +100,20 @@
   [[k m]]
   (tag+attr k m))
 
+(declare match)
+
+(defn any
+  "Get a predicate that will match any of the provided compatible data in `xs`."
+  [& xs]
+  (if (empty? xs)
+    (constantly false)
+    (let [tags  (when-let [ks (not-empty (filter keyword? xs))]
+                  (apply tags ks))
+          other (map match (remove keyword? xs))]
+      (if tags
+        (apply some-fn tags other)
+        (apply some-fn other)))))
+
 (defn match
   "Get a predicate to match Hiccup locs based on a piece of compatible data `x`.
 
@@ -117,14 +131,7 @@
    (cond
      (fn? x) x
      (keyword? x) (tag x)
-     (set? x) (if (empty? x)
-                (constantly false)
-                (let [tags  (when-let [ks (not-empty (filter keyword? x))]
-                              (apply tags ks))
-                      other (map match (remove keyword? x))]
-                  (if tags
-                    (apply some-fn tags other)
-                    (apply some-fn other))))
+     (set? x) (apply any x)
      (map? x) (attr x)
      (vector? x) (hiccup x)
      :else (throw (ex-info "unsupported type of matcher:" {:input x

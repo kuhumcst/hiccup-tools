@@ -183,6 +183,18 @@
       (is (not (pred [:span {:class "thing"}
                       "content"]))))))
 
+(deftest any-test
+  (let [pred (comp-zip (match/any :div {:id true}))]
+    (testing "the existing of any match should result in a full match"
+      (is (pred [:span {:id    "present"
+                        :class "thing"}
+                 "content"]))
+      (is (pred [:div {:id    "present"
+                       :class "thing"}
+                 "content"]))
+      (is (not (pred [:span {:class "thing"}
+                      "content"]))))))
+
 (deftest matcher-test
   (testing "these data types should be explicitly supported"
     (is (fn? (match/match (fn []))))
