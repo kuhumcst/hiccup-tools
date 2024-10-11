@@ -44,12 +44,12 @@
               [:pb {:id 5 :class "thing"}]
               4
               [:e]]]]
-    (testing "exhaustive searches should find every matching element"
+    (testing ":exhaustive searches should find every matchers match"
       (is (= (h/search doc {:pb    (match/hiccup [:pb {:id    true
                                                        :class false}])
                             :id    (match/attr {:id true})
                             :no-id (match/attr {:id false})}
-                       :exhaustive true)
+                       :on-match :continue)
              {:pb    [[:pb {:id 1}] [:pb {:id 4}]],
               :id    [[:pb {:id 1}]
                       [:a {:id 2} [:b {} [:c {:id 3} 1 [:pb {:id 4}] 2] 2 [:pb] 3]]
@@ -64,7 +64,25 @@
                       [:pb]
                       [:d 3 [:pb {:id 5, :class "thing"}] 4 [:e]]
                       [:e]]})))
-    (testing "non-exhaustive searches should find outer matching elements"
+    (testing ":skip-node searches should find every matching element only once"
+      (is (= (h/search doc [[:pb (match/hiccup [:pb {:id    true
+                                                     :class false}])]
+                            [:id (match/attr {:id true})]
+                            [:no-id (match/attr {:id false})]]
+                       :on-match :skip-node)
+             {:pb    [[:pb {:id 1}] [:pb {:id 4}]],
+              :id    [[:a {:id 2} [:b {} [:c {:id 3} 1 [:pb {:id 4}] 2] 2 [:pb] 3]]
+                      [:c {:id 3} 1 [:pb {:id 4}] 2]
+                      [:pb {:id 5, :class "thing"}]],
+              :no-id [[:root
+                       [:pb {:id 1}]
+                       [:a {:id 2} [:b {} [:c {:id 3} 1 [:pb {:id 4}] 2] 2 [:pb] 3]]
+                       [:d 3 [:pb {:id 5, :class "thing"}] 4 [:e]]]
+                      [:b {} [:c {:id 3} 1 [:pb {:id 4}] 2] 2 [:pb] 3]
+                      [:pb]
+                      [:d 3 [:pb {:id 5, :class "thing"}] 4 [:e]]
+                      [:e]]})))
+    (testing ":skip-tree searches should find only outer matching elements"
       (is (= (h/search doc {:pb    (match/hiccup [:pb {:id    true
                                                        :class false}])
                             :id    (match/attr {:id true})
@@ -72,7 +90,7 @@
                                      ;; NOTE: to avoid matching the root
                                      (complement (match/tag :root))
                                      (match/attr {:id false}))}
-                       :exhaustive false)
+                       :on-match :skip-tree)
              {:id    [[:a {:id 2}
                        [:b {}
                         [:c {:id 3} 1

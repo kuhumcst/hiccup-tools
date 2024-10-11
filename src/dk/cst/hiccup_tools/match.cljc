@@ -137,4 +137,7 @@
      :else (throw (ex-info "unsupported type of matcher:" {:input x
                                                            :type  (type x)}))))
   ([x & xs]
-   (apply every-pred (match x) (map match xs))))
+   (let [f (apply every-pred (match x) (map match xs))]
+     (if (fn? x)
+       (with-meta f (meta x))
+       f))))

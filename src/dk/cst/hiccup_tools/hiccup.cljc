@@ -76,12 +76,18 @@
 (defn search
   "Return a mapping from k->matches in `hiccup` for every pred in `k->matcher`.
 
-  By default, children of matched nodes are skipped. You may optionally specify
-  :exhaustive true if the search should continue within matched nodes too."
-  [hiccup k->matcher & {:keys [exhaustive] :as opts
-                        :or   {exhaustive false}}]
+  There is an optional :on-match parameter for the search behaviour. By default,
+  matched nodes AND their children are skipped (:skip-tree). You may specify
+  :continue if the search should continue within matched nodes too or :skip-node
+  if only a single matcher should apply to a matched node.
+
+  The :on-match option can also be specified via metadata of both the
+  `k->matcher` and the matcher."
+  [hiccup k->matcher & {:keys [on-match] :as opts
+                        :or   {on-match :skip-tree}}]
   (let [k->pred    (helper/update-kv-vals k->matcher match/match)
-        k->matches (atom (zipmap (map first k->matcher) (repeat [])))]
+        k->matches (atom (zipmap (map first k->matcher) (repeat [])))
+        type       (or (:on-match (meta k->matcher)) on-match)]
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (->> (remove (comp empty? second) @k->matches)
@@ -92,15 +98,24 @@
                              (and k pred (pred loc))
                              (do
                                (swap! k->matches update k conj (zip/node loc))
-                               (if exhaustive
+                               (condp = (or (:on-match (meta pred)) type)
+                                 ;; :continue searches will exhaustively try
+                                 ;; every matcher on every node in the zipper.
+                                 :continue
                                  (recur k->pred')
 
-                                 ;; Non-exhaustive searches remove matches from
-                                 ;; the tree, but we must simulate an early end
-                                 ;; to avoid potentially removing the root.
+                                 ;; :skip-tree searches remove matches from the
+                                 ;; tree, though we might simulate an early end
+                                 ;; to avoid potentially removing the root node.
+                                 :skip-tree
                                  (if (nil? (zip/path loc))
                                    [(zip/node loc) :end]
-                                   (zip/remove loc))))
+                                   (zip/remove loc))
+
+                                 ;; :skip-node searches just return the current
+                                 ;; loc, ending the node's matching loop.
+                                 :skip-node
+                                 loc))
 
                              (not-empty k->pred')
                              (recur k->pred')

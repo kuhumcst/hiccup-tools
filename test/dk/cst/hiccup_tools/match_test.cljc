@@ -241,4 +241,10 @@
     (testing "matcher combinations must match every pred"
       (is (combo-pred [:a {:id "glen" :class "something"} "child"]))
       (is (not (combo-pred [:a {:id "glen"}])))
-      (is (not (combo-pred [:a]))))))
+      (is (not (combo-pred [:a]))))
+    (testing "metadata should be preserved"
+      (is (= (meta (match/match ^{:on-match :continue} (fn [])))
+             {:on-match :continue}))
+      (is (= (meta (match/match ^{:on-match :continue} (fn [])
+                                :a {:glen true}))
+             {:on-match :continue})))))
