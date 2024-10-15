@@ -45,9 +45,7 @@
     (loop [loc (hzip/hiccup-zip hiccup)]
       (if (zip/end? loc)
         (zip/root loc)
-        (recur (zip/next (if (do
-                               (prn (zip/node loc))
-                               (pred loc))
+        (recur (zip/next (if (pred loc)
                            (let [[before after :as res] (z/split-tree loc opts)]
                              (if before
                                ;; The usual case (split occurs after some content)
