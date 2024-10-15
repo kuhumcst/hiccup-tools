@@ -81,17 +81,37 @@
                                   :key   "other"}]))))))
 
 (deftest tag+attr-test
-  (let [pred (comp-zip (match/tag+attr :span {:id    true
-                                              :class "thing"}))]
+  (let [tag+attr-pred  (comp-zip (match/tag+attr :span {:id    true
+                                                        :class "thing"}))
+        tag+empty-pred (comp-zip (match/tag+attr :span {}))
+        tag+nil-pred   (comp-zip (match/tag+attr :span nil))]
     (testing "the combination of tag+attr should match both"
-      (is (pred [:span {:id    "present"
-                        :class "thing"}
-                 "content"]))
-      (is (not (pred [:div {:id    "present"
-                            :class "thing"}
-                      "content"])))
-      (is (not (pred [:span {:class "thing"}
-                      "content"]))))))
+      (is (tag+attr-pred [:span {:id    "present"
+                                 :class "thing"}
+                          "content"]))
+      (is (not (tag+attr-pred [:div {:id    "present"
+                                     :class "thing"}
+                               "content"])))
+      (is (not (tag+attr-pred [:span {:class "thing"}
+                               "content"]))))
+    (testing "an empty attr map should match any attributes"
+      (is (tag+empty-pred [:span {:id    "present"
+                                  :class "thing"}
+                           "content"]))
+      (is (tag+empty-pred [:span
+                           "content"]))
+      (is (not (tag+empty-pred [:div {:id    "present"
+                                      :class "thing"}
+                                "content"]))))
+    (testing "a nil attr map should match any attributes"
+      (is (tag+nil-pred [:span {:id    "present"
+                                :class "thing"}
+                         "content"]))
+      (is (tag+nil-pred [:span
+                         "content"]))
+      (is (not (tag+nil-pred [:div {:id    "present"
+                                    :class "thing"}
+                              "content"]))))))
 
 (deftest has-child-test
   (let [pred       (comp-zip (match/has-child (match/tag+attr :span {:id    true
@@ -184,7 +204,8 @@
                       "content"]))))))
 
 (deftest any-test
-  (let [pred (comp-zip (match/any :div {:id true}))]
+  (let [pred       (comp-zip (match/any :div {:id true}))
+        empty-pred (comp-zip (match/any))]
     (testing "the existing of any match should result in a full match"
       (is (pred [:span {:id    "present"
                         :class "thing"}
@@ -193,7 +214,17 @@
                        :class "thing"}
                  "content"]))
       (is (not (pred [:span {:class "thing"}
-                      "content"]))))))
+                      "content"]))))
+    (testing "an empty argument list of any results in *everything* matching"
+      (is (empty-pred [:span {:id    "present"
+                              :class "thing"}
+                       "content"]))
+      (is (empty-pred [:div
+                       "content"]))
+      (is (empty-pred [:span {:class "thing"}
+                       [:span {:id    "present"
+                               :class "thing"}
+                        "content"]])))))
 
 (deftest matcher-test
   (testing "these data types should be explicitly supported"
@@ -233,11 +264,11 @@
       (is (set-pred [:span]))
       (is (set-pred [:a {:id "glen" :class "something"}]))
       (is (not (set-pred [:a {:class "something"}]))))
-    (testing "empty sets should match nothing"
-      (is (not (empty-set-pred [:div {} "glen"])))
-      (is (not (empty-set-pred [:span])))
-      (is (not (empty-set-pred [:a {:id "glen" :class "something"}])))
-      (is (not (empty-set-pred [:a {:class "something"}]))))
+    (testing "empty sets should match anything"
+      (is (empty-set-pred [:div {} "glen"]))
+      (is (empty-set-pred [:span]))
+      (is (empty-set-pred [:a {:id "glen" :class "something"}]))
+      (is (empty-set-pred [:a {:class "something"}])))
     (testing "matcher combinations must match every pred"
       (is (combo-pred [:a {:id "glen" :class "something"} "child"]))
       (is (not (combo-pred [:a {:id "glen"}])))

@@ -34,19 +34,21 @@
   whilst a value of nil/false can be used to match on the absence of the key.
   Any other values must match *directly* with the values of the attr map."
   [m]
-  (assert (map? m))
-  (fn [loc]
-    (when-let [node (loc->node loc)]
-      (let [attr (elem/attr node)]
-        (loop [[[k v] & m'] m]
-          (if (nil? k)
-            true
-            (if (contains? attr k)
-              (when (or (true? v)
-                        (= (get attr k) v))
-                (recur m'))
-              (when (not v)
-                (recur m')))))))))
+  (assert (or (map? m) (nil? m)))
+  (if (empty? m)
+    (constantly true)
+    (fn [loc]
+      (when-let [node (loc->node loc)]
+        (let [attr (elem/attr node)]
+          (loop [[[k v] & m'] m]
+            (if (nil? k)
+              true
+              (if (contains? attr k)
+                (when (or (true? v)
+                          (= (get attr k) v))
+                  (recur m'))
+                (when (not v)
+                  (recur m'))))))))))
 
 (defn has-child
   "Get a predicate matching elements where `pred` is true for at least one of
@@ -106,7 +108,7 @@
   "Get a predicate that will match any of the provided compatible data in `xs`."
   [& xs]
   (if (empty? xs)
-    (constantly false)
+    (constantly true)
     (let [tags  (when-let [ks (not-empty (filter keyword? xs))]
                   (apply tags ks))
           other (map match (remove keyword? xs))]
