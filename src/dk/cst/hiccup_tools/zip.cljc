@@ -1,6 +1,7 @@
 (ns dk.cst.hiccup-tools.zip
   "Functions for navigating and structurally transforming zippers."
   (:require [clojure.zip :as zip]
+            [dk.cst.hiccup-tools.helper :as helper]
             [dk.cst.hiccup-tools.elem :as elem]))
 
 (defn top-level
@@ -85,3 +86,14 @@
   "Insert a space at the end of `loc`."
   [loc]
   (zip/append-child loc " "))
+
+(def ^:dynamic *custom-element-prefix* "x")
+
+(defn html-safe
+  "Make the node at `loc` HTML-safe."
+  [loc]
+  (let [[tag attr children] (elem/parts (zip/node loc))
+        prefix-data (fn [kw] (helper/prefix-kw "data" kw))
+        tag'        (helper/prefix-kw *custom-element-prefix* tag)
+        attr'       (update-keys attr prefix-data)]
+    (zip/replace loc (into [tag' attr'] children))))

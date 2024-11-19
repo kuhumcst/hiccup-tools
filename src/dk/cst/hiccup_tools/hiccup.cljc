@@ -128,8 +128,8 @@
           (zip/node)))
 
 ;; TODO: proper support for <pre>
-(def html-conversion
-  {:conversions
+(def html-text
+  {:single
    {#{:address :article :aside :blockquote :canvas :div :dl :fieldset
       :figure :footer :h1 :h2 :h3 :h4 :h5 :h6 :header :hr :main :nav
       :noscript :ol :p :pre :section :table :ul}
@@ -152,7 +152,6 @@
     #{:button :form :head :label :input :nav :select :script :video}
     zip/remove
 
-
     {:aria-hidden "true"}
     zip/remove}
 
@@ -164,20 +163,26 @@
          (str/replace #"\n\s+\n" "\n\n")
          (str/replace #"\n\n+" "\n\n")))})
 
-;; TODO: allow for multiple matches? e.g. to implement markdown
-(defn- run-conversions
+(defn run-conversions
   "Convert the node at `loc` if any of the preds in `conversions` matches,
   where `conversions` is a map from matching predicate -> conversion fn.
 
   These convert fns are responsible for appending special fns to create needed
-  whitespace when the final text string is produced in the 'text' fn below."
-  [loc conversions]
-  (loop [[[pred convert] & rem] conversions]
-    (if (and pred (pred loc) convert)
-      (convert loc)
+  whitespace when the final text string is produced in the 'text' fn below.
+
+  The option :on-match may be set to :continue if the (otherwise default)
+  behaviour of an early exit after each match shouldn't be observed."
+  [loc conversions & {:keys [on-match]}]
+  (loop [[[pred convert] & rem] conversions
+         loc' loc]
+    (if (and pred (pred loc') convert)
+      (if (and (= on-match :continue)
+               (not (empty? rem)))
+        (recur rem (convert loc'))
+        (convert loc'))
       (if rem
-        (recur rem)
-        loc))))
+        (recur rem loc')
+        loc'))))
 
 ;; Normal strings are trimmed as inline elements.
 ;; Added whitespace is kept as is.
@@ -190,31 +195,82 @@
         (str/replace #" +" " "))))
 
 (defn hiccup->text
-  "Convert `hiccup` into plain text.
+  "Convert a `hiccup` tree into plain text.
 
-  An element is treated as inline unless a pred in the optional :conversions
+  An element is treated as inline unless a pred in the optional conversions
   mapping matches it. These predicates test for the existence of certain nodes
   while the convert fns take the loc of the matched node as an argument and
   return a converted loc, e.g. with a whitespace generating fn inserted.
 
+  Conversions listed under the :single option exit after the first match, while
+  conversions listed under the :multi option exhaust every possible conversion.
+
   See 'html-conversion' for an example of how to build a pred->convert mapping."
-  [hiccup & [{:keys [conversions postprocess] :as opts}]]
-  (let [text-nodes   (atom [])
-        conversions' (update-keys conversions match/match)]
-    (loop [loc (hzip/hiccup-zip hiccup)]
+  [hiccup & [{:keys [single multi preprocess postprocess] :as opts
+              :or   {single      []
+                     multi       []
+                     preprocess  identity
+                     postprocess identity}}]]
+  (let [text-nodes (atom [])
+        single'    (helper/update-kv-keys single match/match)
+        multi'     (helper/update-kv-keys multi match/match)]
+    (loop [loc (preprocess (hzip/hiccup-zip hiccup))]
       (if (zip/end? loc)
         (->> @text-nodes
              (map trim-extra)
              (apply str)
              (postprocess))
         (recur (zip/next (if (zip/branch? loc)
-                           (run-conversions loc conversions')
+                           (-> loc
+                               (run-conversions single' :on-match :stop)
+                               (run-conversions multi' :on-match :continue))
                            (let [node (zip/node loc)]
                              (when (string? node)
                                (swap! text-nodes conj node))
                              loc))))))))
 
+(def valid-html
+  "Conversions for turning XML-based Hiccup into valid HTML."
+  {:single {(match/any) z/html-safe}})
+
+(defn reshape
+  "Reshape a `hiccup` tree.
+
+  An element is treated as inline unless a pred in the optional conversions
+  mapping matches it. These predicates test for the existence of certain nodes
+  while the convert fns take the loc of the matched node as an argument and
+  return a converted loc, e.g. with a whitespace generating fn inserted.
+
+  Conversions listed under the :single option exit after the first match, while
+  conversions listed under the :multi option exhaust every possible conversion.
+
+  See 'valid-html' for an example of how to build a pred->convert mapping."
+  [hiccup & [{:keys [single multi preprocess postprocess] :as opts
+              :or   {single      []
+                     multi       []
+                     preprocess  identity
+                     postprocess identity}}]]
+  (let [single' (helper/update-kv-keys single match/match)
+        multi'  (helper/update-kv-keys multi match/match)]
+    (loop [loc (preprocess (hzip/hiccup-zip hiccup))]
+      (if (zip/end? loc)
+        (postprocess (zip/root loc))
+        (recur (zip/next (if (zip/branch? loc)
+                           (-> loc
+                               (run-conversions single' :on-match :stop)
+                               (run-conversions multi' :on-match :continue))
+                           loc)))))))
+
 (comment
+  (reshape [:a [:b "hej " [:c {:id "blabla"} "med dig"] " der\n\n"]]
+           valid-html)
+
+  (reshape [:a [:b "hej " [:c {:id "blabla"} "med dig"] " der\n\n"]]
+           {:single {:a          identity
+                     (match/any) z/html-safe}
+            :multi  {:x-c            (fn [loc] (zip/append-child loc 123))
+                     {:data-id true} (fn [loc] (zip/append-child loc 456))}})
+
   (search
     [:a [:b "hej " [:c {:id "blabla"} "med dig"] " der\n\n"]]
     {:matches #{:b {:id true}}})

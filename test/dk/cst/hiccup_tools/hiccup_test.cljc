@@ -1,5 +1,7 @@
 (ns dk.cst.hiccup-tools.hiccup-test
   (:require [clojure.test :refer [deftest is testing]]
+            [clojure.zip :as zip]
+            [dk.cst.hiccup-tools.zip :as z]
             [dk.cst.hiccup-tools.example :as example]
             [dk.cst.hiccup-tools.hiccup :as h]
             [dk.cst.hiccup-tools.match :as match]))
@@ -196,5 +198,20 @@
 
 ;; TODO: improve this test, mostly by improving HTML conversion itself
 (deftest hiccup->text-test
-  (is (= (h/hiccup->text example/html5 h/html-conversion)
+  (is (= (h/hiccup->text example/html5 h/html-text)
          (slurp "test/example.txt"))))
+
+(deftest reshape-test
+  (is (= (h/reshape [:a [:b "hej " [:c {:id "blabla"} "med dig"] " der\n\n"]]
+                    {:single {:a          identity
+                              (match/any) z/html-safe}
+                     :multi  {:x-c            (fn [loc] (zip/append-child loc 123))
+                              {:data-id true} (fn [loc] (zip/append-child loc 456))}})
+         [:a [:x-b {} "hej " [:x-c {:data-id "blabla"} "med dig" 123 456] " der\n\n"]]))
+  (binding [z/*custom-element-prefix* "glen"]
+    (is (= (h/reshape [:a [:b "hej " [:c {:id "blabla"} "med dig"] " der\n\n"]]
+                      {:single {:a          identity
+                                (match/any) z/html-safe}
+                       :multi  {:glen-c         (fn [loc] (zip/append-child loc 123))
+                                {:data-id true} (fn [loc] (zip/append-child loc 456))}})
+           [:a [:glen-b {} "hej " [:glen-c {:data-id "blabla"} "med dig" 123 456] " der\n\n"]]))))

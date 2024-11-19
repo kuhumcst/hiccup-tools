@@ -19,6 +19,12 @@
     (rest children)
     children))
 
+(defn parts
+  [[tag & [attr & children :as rem]]]
+  (if (map? attr)
+    [tag attr children]
+    [tag {} rem]))
+
 (defn insert-front
   [node children]
   (let [head (head node)]
@@ -36,4 +42,6 @@
   (head [:p 1 2 3])
   (head [:p {:id "glen"} 1 2 3])
   (children [:p {:id "glen"} 1 2 3])
+  (parts [:p {:id "glen"} 1 2 3])
+  (parts [:p 1 2 3])
   #_.)

@@ -105,5 +105,5 @@
 
 (comment
   ;; Update example text
-  (spit "test/example.txt" (h/hiccup->text html5 h/html-conversion))
+  (spit "test/example.txt" (h/hiccup->text html5 h/html-text))
   #_.)
