@@ -50,47 +50,6 @@
                 (when (not v)
                   (recur m'))))))))))
 
-(defn has-child
-  "Get a predicate matching elements where `pred` is true for at least one of
-  the children. If `index` is supplied, the child must match the exact position.
-
-  This can compose with other predicates, e.g. those from this namespace:
-
-    (child (attr {:class \"label\"}))
-
-  The above matches the parent element of a child with the :class `label`."
-  ([pred]
-   (assert (fn? pred))
-   (fn [loc]
-     (when-let [parent (loc->node loc)]
-       (loop [[child & children] (zip/children loc)]
-         (cond
-           (and (vector? child)
-                (pred (hzip/hickory-zip child))) parent
-           children (recur children))))))
-  ([pred index]
-   (assert (fn? pred))
-   (assert (number? index))
-   (fn [loc]
-     (when-let [parent (loc->node loc)]
-       (let [child (nth (elem/children parent) index)]
-         (when (and (vector? child)
-                    (pred (hzip/hickory-zip child)))
-           parent))))))
-
-(defn has-parent
-  "Get a predicate matching elements where `pred` is true for its parent.
-
-  This can compose with other predicates, e.g. those from this namespace:
-
-    (parent (attr {:class \"label\"}))
-
-  The above matches the child element of the parent with the :class `label`."
-  [pred]
-  (assert (fn? pred))
-  (fn [loc]
-    (some-> loc zip/up pred)))
-
 (defn tag+attr
   "Get a predicate for matching both tag `k` and attr `m`."
   [k m]
@@ -143,3 +102,43 @@
      (if (fn? x)
        (with-meta f (meta x))
        f))))
+
+(defn has-child
+  "Get a predicate matching elements where `matcher` is true for at least one of
+  the children. If `index` is supplied, the child must match the exact position.
+
+  This can compose with other predicates, e.g. those from this namespace:
+
+    (has-child :abbr)
+
+  The above matches an element which contains an :abbr element."
+  ([matcher]
+   (let [matcher' (match matcher)]
+     (fn [loc]
+       (when-let [parent (loc->node loc)]
+         (loop [[child & children] (zip/children loc)]
+           (cond
+             (and (vector? child)
+                  (matcher' (hzip/hickory-zip child))) parent
+             children (recur children)))))))
+  ([matcher index]
+   (let [matcher' (match matcher)]
+     (fn [loc]
+         (when-let [parent (loc->node loc)]
+           (let [child (nth (elem/children parent) index)]
+             (when (and (vector? child)
+                        (matcher' (hzip/hickory-zip child)))
+               parent)))))))
+
+(defn has-parent
+  "Get a predicate matching elements where `matcher` is true for its parent.
+
+  This can composed with other predicates, e.g. those from this namespace:
+
+    (has-parent {:class \"label\"})
+
+  The above matches the child element of the parent with the :class 'label'."
+  [matcher]
+  (let [matcher' (match matcher)]
+    (fn [loc]
+      (some-> loc zip/up matcher'))))

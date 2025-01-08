@@ -114,11 +114,12 @@
                               "content"]))))))
 
 (deftest has-child-test
-  (let [pred       (comp-zip (match/has-child (match/tag+attr :span {:id    true
-                                                                     :class "thing"})))
-        index-pred (comp-zip (match/has-child (match/tag+attr :span {:id    true
-                                                                     :class "thing"})
-                                              1))]
+  (let [pred          (comp-zip (match/has-child (match/tag+attr :span {:id    true
+                                                                        :class "thing"})))
+        index-pred    (comp-zip (match/has-child (match/tag+attr :span {:id    true
+                                                                        :class "thing"})
+                                                 1))
+        implicit-pred (comp-zip (match/has-child :a))]
     (testing "should only match direct children"
       (is (pred [:div
                  [:span {:id    "present"
@@ -156,16 +157,20 @@
                             [:span {:id    "present"
                                     :class "thing"}
                              "content"]
-                            [:div]]))))))
+                            [:div]]))))
+    (testing "should accept the same implicit matchers as the basic match fn"
+      (is (implicit-pred [:div [:a]]))
+      (is (not (implicit-pred [:div [:span [:a]]]))))))
 
 (deftest has-parent-test
-  (let [skip (fn [n hiccup]
-               (->> (hiccup-zip hiccup)
-                    (iterate zip/next)
-                    (take (inc n))
-                    (last)))
-        pred (match/has-parent (match/tag+attr :div {:id    true
-                                                     :class "thing"}))]
+  (let [skip          (fn [n hiccup]
+                        (->> (hiccup-zip hiccup)
+                             (iterate zip/next)
+                             (take (inc n))
+                             (last)))
+        pred          (match/has-parent (match/tag+attr :div {:id    true
+                                                              :class "thing"}))
+        implicit-pred (match/has-parent :a)]
     (testing "should only match direct ancestor"
       (is (pred (skip 1 [:div {:id    "present"
                                :class "thing"}
@@ -188,7 +193,10 @@
                                :class "thing"}
                          [:span]
                          [:span]
-                         [:span]]))))))
+                         [:span]]))))
+    (testing "should accept the same implicit matchers as the basic match fn"
+      (is (implicit-pred (skip 1 [:a [:div]])))
+      (is (not (implicit-pred (skip 1 [:div [:a]])))))))
 
 (deftest hiccup-test
   (let [pred (comp-zip (match/hiccup [:span {:id    true
