@@ -45,3 +45,32 @@
               [:pb {:id 4 :class "thing"}]
               4
               [:e]])))))
+
+(deftest splice-test
+  (let [loc (hzip/hiccup-zip [:root
+                              [:node 1 2 3 [:node 4 5 6]]
+                              [:node 7 8 9]])]
+    (testing "splice should not skip the spliced in children"
+      ;; Since we don't call next the last loc is returned, i.e. the root.
+      (is (= (-> loc zip/next z/splice zip/node)
+             (-> loc zip/next z/splice zip/root)
+             [:root
+              1 2 3 [:node 4 5 6]                           ; spliced nodes
+              [:node 7 8 9]])))
+    (testing "splice and splice-skip do the same transformation"
+      ;; Since we don't call zip/next and splice removes the node, the last loc
+      ;; in the D.F.S. is returned, i.e. the now transformed root node.
+      (is (= (-> loc zip/next z/splice zip/root)
+             (-> loc zip/next z/splice-skip zip/root)
+             [:root
+              1 2 3 [:node 4 5 6]                           ; spliced nodes
+              [:node 7 8 9]])))
+    (testing "splice-skip should skip the spliced in children"
+      ;; Since we don't call zip/next, the last loc in the D.F.S. is returned,
+      ;; i.e. 6, even though we never actually visited this node!
+      (is (= (-> loc zip/next z/splice-skip zip/node)
+             6))
+      ;; The next node in the D.F.S. is still what we would expect, however.
+      (is (= (-> loc zip/next z/splice-skip zip/next zip/node)
+             [:node 7 8 9])))))
+

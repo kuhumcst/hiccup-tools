@@ -23,6 +23,28 @@
       (pred loc') loc'
       :else (recur (zip/next loc')))))
 
+(defn splice-skip
+  "Replace a `loc` with its children and skip them."
+  [loc]
+  ;; Applying insert-left to the list of children ensures that we will *not*
+  ;; visit any of these nodes when calling zip/next on the returned loc.
+  (->> (zip/children loc)
+       (reduce (fn [loc child]
+                 (zip/insert-left loc child))
+               loc)
+       (zip/remove)))
+
+(defn splice
+  "Replace a `loc` with its children, but do not skip them."
+  [loc]
+  ;; Applying insert-right to the reversed list of children rather than applying
+  ;; insert-left to the actual list ensures that these children *are* visited.
+  (->> (reverse (zip/children loc))
+       (reduce (fn [loc child]
+                 (zip/insert-right loc child))
+               loc)
+       (zip/remove)))
+
 (defn split-node
   "Split the node at `loc` into [left right] nodes.
 
