@@ -72,5 +72,11 @@
              6))
       ;; The next node in the D.F.S. is still what we would expect, however.
       (is (= (-> loc zip/next z/splice-skip zip/next zip/node)
-             [:node 7 8 9])))))
+             [:node 7 8 9])))
+    (testing "splice and splice-skip also accept a coll replacing the children"
+      (is (= (-> loc zip/next (z/splice ["a" "b" "c"]) zip/root)
+             (-> loc zip/next (z/splice-skip ["a" "b" "c"]) zip/root)
+             [:root
+              "a" "b" "c"                                   ; spliced nodes
+              [:node 7 8 9]])))))
 
